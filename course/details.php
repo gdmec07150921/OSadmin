@@ -1,0 +1,61 @@
+<?php
+require ('../include/init.inc.php');
+$search=$method = $course_id = $course_name = $t_name =$course_hour=$course_where=$course_time=$people=$course_state=$course_summary=$course_url=$t_url= '';
+extract ( $_GET, EXTR_IF_EXISTS );
+
+if ($method == 'del' && ! empty ( $course_id )) {
+    //var_dump($method);
+    $details = Details::getDetailsByID($course_id);
+    $result = Details::delDetails ( $course_id );
+    //var_dump($result);
+    if ($result) {
+
+      SysLog::addLog ( UserSession::getUserName(), 'DELETE', 'details' ,$course_id, json_encode( $details) );
+
+      Common::exitWithSuccess ('课程删除成功','course/details.php');
+    }else{
+            OSAdmin::alert("error");
+        }
+}
+
+//START 数据库查询及分页数据
+$page_size = PAGE_SIZE;
+$page_no=$page_no<1?1:$page_no;
+
+if($search){
+
+    $row_count = Details::countSearch($course_name); 
+    $total_page=$row_count%$page_size==0?$row_count/$page_size:ceil($row_count/$page_size);
+    $total_page=$total_page<1?1:$total_page;
+    $page_no=$page_no>($total_page)?($total_page):$page_no;
+    $start = ($page_no - 1) * $page_size;
+    $details = Details::search($course_name,$menu_name,$start , $page_size);
+    
+}else{
+    //echo('if not seatch');
+    $row_count = Details::count ();
+    $total_page=$row_count%$page_size==0?$row_count/$page_size:ceil($row_count/$page_size);
+    $total_page=$total_page<1?1:$total_page;
+    $page_no=$page_no>($total_page)?($total_page):$page_no;
+    $start = ($page_no - 1) * $page_size;
+    $details = Details::getAllDetails ( $start , $page_size );
+    
+    //var_dump($details);
+}
+
+
+$page_html=Pagination::showPager("details.php?course_id=$course_id&course_name=$course_name&search=$search",$page_no,$page_size,$row_count);
+
+//$details = Details::getCourses();
+$radio_types=array(0=>"Male",1=>"Female");
+
+$confirm_html = OSAdmin::renderJsConfirm("icon-remove");
+//echo(ADMIN_URL.TEMPLATE_DIR);
+Template::assign ( 'page_no', $page_no );//当前页码
+Template::assign ( '_GET', $_GET);
+Template::assign('details', $details);//主数据
+Template::assign ( 'img', IMG_URL);
+Template::assign('radio_types', $radio_types);
+Template::assign ( 'osadmin_action_confirm' , $confirm_html);
+Template::assign ( 'page_html', $page_html );//分页
+Template::display('course/details.tpl');
